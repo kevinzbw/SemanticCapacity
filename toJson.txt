@@ -1,0 +1,35 @@
+input {
+  file {
+    path => "/Users/kevin/Downloads/data_capacity/agg_article_title_to_cat_id.txt"
+    start_position => "beginning"
+    sincedb_path => "/dev/null"
+    #sincedb_path => "/Users/kevin/Downloads/report_data/log.db"
+  }
+}
+filter {
+  csv {
+      autogenerate_column_names => false
+      separator => "	"
+      columns => ["title", "categories"]
+      remove_field => ["message"]
+  }
+
+  mutate {
+    rename => {
+        "title" => "title"
+        "categories" => "category_list"
+    }
+    split => ["category_list", ";"]
+  }
+}
+
+output {
+  elasticsearch {
+    hosts => "localhost:9200"
+    index => "es-capacity"
+    document_type => "article"
+  }
+  stdout {
+    codec => rubydebug
+  }
+}

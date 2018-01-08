@@ -1,0 +1,16 @@
+curl -XPUT "http://localhost:9200/es-capacity/" -d'
+{
+  "mappings": {
+      "project": {
+         "properties": {
+            "title": {
+              "type": "text",
+              "analyzer": "english"
+            },
+            "category_list": {
+              "type": "keyword"
+            }
+         }
+      }
+   }
+}'
