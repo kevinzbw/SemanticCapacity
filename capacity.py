@@ -21,7 +21,7 @@ def generate_data():
     cat_id_to_name = defaultdict(int)
     cat_id_to_pages = defaultdict(int)
     article_id_to_name = defaultdict(int)
-    article_id_to_name = 
+    cat_to_articles = defaultdict(list)
     g = defaultdict(list)
     ginv = defaultdict(list)
     # all_id = set()
@@ -43,11 +43,29 @@ def generate_data():
             cat_name_to_id[cat] = cat_id
             cat_id_to_name[cat_id] = cat
             cat_id_to_pages[cat_id] = int(n_pages)
+
+    with open("data/official_article_id_to_article_title.txt", "r", encoding = "ISO-8859-1") as f:
+        for line in f.readlines():
+            sp = line.split("\t")
+            article_id = sp[0].strip()
+            article_title = sp[1].strip()
+            article_id_to_name[article_id] = article_title
+    
+    with open("data/agg_cat_id_to_article_id.txt", "r", encoding = "ISO-8859-1") as f:
+        for line in f.readlines():
+            sp = line.split("\t")
+            cat_id = sp[0].strip()
+            articles_id = sp[1].strip().split(";")
+            cat_to_articles[cat_id] = articles_id
+    
+    
     # root_id = all_id - sub_id
     # print(map(cat_id_to_name.get, root_id))
     store_obj(cat_name_to_id, "cat_name_to_id.txt")
     store_obj(cat_id_to_name, "cat_id_to_name.txt")
     store_obj(cat_id_to_pages, "cat_id_to_pages.txt")
+    store_obj(article_id_to_name, "article_id_to_name.txt")
+    store_obj(cat_to_articles, "cat_to_articles.txt")
     store_obj(g, "g.txt")
     store_obj(ginv, "ginv.txt")
     print("finished")
@@ -294,7 +312,7 @@ def reselect_candidate(results):
     new_results = [results[i] for i in major_component]
     print(major_component)
     return new_results
-    
+
 def plot(terms, weights):
     plt.figure()
     pos = list(range(len(terms)))
@@ -306,6 +324,7 @@ def plot(terms, weights):
     plt.show()
 
 # generate_data()
+# exit()
 cat_id_to_name = load_obj("cat_id_to_name.txt")
 # cat_name_to_id = load_obj("cat_name_to_id.txt")
 cat_id_to_pages = load_obj("cat_id_to_pages.txt")
@@ -413,26 +432,3 @@ for terms in terms_list:
     # print(weights1)
     print(weights)
     print("------------")
-
-
-
-# ids = [cat_name_to_id.get(term) for term in terms]
-# rtl = [get_num_leaves(g, i) for i in ids]
-# rtc = [get_num_children(g, i) for i in ids]
-# rtd = [get_max_depth(g, i) for i in ids]
-
-# def printl(lst):
-#     for i in lst:
-#         print(i, "\t", end='')
-#     print()
-
-# print(terms)
-# printl(terms)
-# printl(rtl)
-# printl(rtc)
-# printl(rtd)
-
-
-
-
-

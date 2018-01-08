@@ -1,8 +1,11 @@
-curl -XPUT "http://localhost:9200/es-capacity/" -d'
+curl -XPUT "http://localhost:9200/es-capacity/" -H'Content-Type: application/json' -d' 
 {
   "mappings": {
-      "project": {
+      "article": {
          "properties": {
+            "id":{
+              "type": "keyword"
+            },
             "title": {
               "type": "text",
               "analyzer": "english"

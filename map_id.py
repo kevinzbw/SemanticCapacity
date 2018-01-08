@@ -11,7 +11,6 @@ with open("data/official_cat_id_to_cat_title.txt", "r", encoding = "ISO-8859-1")
         sp = line.split("\t")
         map_cat_id[sp[1].strip()] = sp[0].strip() 
 
-# map_cat_id["English_philosophy"] = map_cat_id["British_philosophy"]
 if map_subcat_to_cat:
     file_in = "data/subcat_title_to_cat_title.txt"
     file_out = "data/subcat_id_to_cat_id.txt"
@@ -92,6 +91,7 @@ if map_article_to_cat2:
             article_id = map_article_id[sp[0].strip()]
             fout.write(article_id + "\t" + sp[1].strip() + "\n")
         except:
+            print(sp[0].strip())
             c += 1
         line = fin.readline()
     fin.close()

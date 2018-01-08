@@ -1,6 +1,6 @@
 input {
   file {
-    path => "/Users/kevin/Downloads/data_capacity/agg_article_title_to_cat_id.txt"
+    path => "/Users/kevin/Downloads/data_cap/article.txt"
     start_position => "beginning"
     sincedb_path => "/dev/null"
     #sincedb_path => "/Users/kevin/Downloads/report_data/log.db"
@@ -10,12 +10,13 @@ filter {
   csv {
       autogenerate_column_names => false
       separator => "	"
-      columns => ["title", "categories"]
+      columns => ["article_id", "article_title", "categories"]
       remove_field => ["message"]
   }
 
   mutate {
     rename => {
+        "article_id" => "id"
         "title" => "title"
         "categories" => "category_list"
     }
@@ -28,6 +29,7 @@ output {
     hosts => "localhost:9200"
     index => "es-capacity"
     document_type => "article"
+    document_id => "%{id}"
   }
   stdout {
     codec => rubydebug
