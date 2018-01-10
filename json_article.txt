@@ -17,7 +17,7 @@ filter {
   mutate {
     rename => {
         "article_id" => "id"
-        "title" => "title"
+        "article_title" => "title"
         "categories" => "category_list"
     }
     split => ["category_list", ";"]

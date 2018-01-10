@@ -23,6 +23,7 @@ def generate_data():
     cat_id_to_pages = defaultdict(int)
     article_id_to_name = defaultdict(int)
     cat_to_articles = defaultdict(list)
+    article_to_cats = defaultdict(list)
     g = defaultdict(list)
     ginv = defaultdict(list)
     # all_id = set()
@@ -58,7 +59,13 @@ def generate_data():
             cat_id = sp[0].strip()
             articles_id = sp[1].strip().split(";")
             cat_to_articles[cat_id] = articles_id
-    
+            
+    with open("data/agg_article_id_to_cat_id.txt", "r", encoding = "utf-8") as f:
+        for line in f.readlines():
+            sp = line.split("\t")
+            article_id = sp[0].strip()
+            cats_id = sp[1].strip().split(";")
+            article_to_cats[article_id] = cats_id
     
     # root_id = all_id - sub_id
     # print(map(cat_id_to_name.get, root_id))
@@ -66,21 +73,37 @@ def generate_data():
     store_obj(cat_id_to_name, "cat_id_to_name.txt")
     store_obj(cat_id_to_pages, "cat_id_to_pages.txt")
     store_obj(article_id_to_name, "article_id_to_name.txt")
+    store_obj(article_to_cats, "article_to_cats.txt")
     store_obj(cat_to_articles, "cat_to_articles.txt")
     store_obj(g, "g.txt")
     store_obj(ginv, "ginv.txt")
     print("finished")
 
-def precompute_data(g):
-    id_to_num_leaves = {}
+def precompute_page_data(g, id_to_pages):
+    id_to_num_pages = {}
     c = 0
-    n = len(g.keys())
-    for node in g.keys():
+    n = len(id_to_pages.keys())
+    for node in id_to_pages.keys():
         c += 1
         print(c, "/", n)
-        value = get_num_leaves(g, node)
-        id_to_num_leaves[node] = value
-    store_obj(id_to_num_leaves, "id_to_num_leaves.txt")
+        value = get_num_pages(g, id_to_pages, node)
+        id_to_num_pages[node] = value
+    store_obj(id_to_num_pages, "cat_id_to_total_pages.txt")
+    print("finished")
+
+def precompute_leaf_data(g, cat_id_to_name):
+    id_to_num_leaves = {}
+    c = 0
+    n = len(cat_id_to_name.keys())
+    for node in cat_id_to_name.keys():
+        c += 1
+        print(c, "/", n)
+        if node in g:
+            value = get_num_leaves(g, node)
+            id_to_num_leaves[node] = value
+        else:
+            id_to_num_leaves[node] = 1
+    store_obj(id_to_num_leaves, "cat_id_to_total_leaves2.txt")
     print("finished")
 
 def get_num_leaves(g, nid):
@@ -215,7 +238,7 @@ def get_article_weight_gen(search, title, weight_method, argv):
     s = 0
     s_score = 0
     for r in results:
-        score, title, cat_list = r
+        score, article_id, title, cat_list = r
         s_score += score
         if isinstance(weight_method, dict):
             cat_weights = [weight_method[cat_id] for cat_id in cat_list]
@@ -230,12 +253,12 @@ def get_article_weight_gen(search, title, weight_method, argv):
     return s
 
 def search_article_title(search, title):
-    s = search.query("match", title=title)[0:10]
+    s = search.query("match", article_title=title)[0:5]
     response = s.execute()
     rt = []
     for h in response:
-        rt.append([h.meta.score, h.title, h.category_list])
-        print(h.meta.score, h.title, h.category_list)
+        rt.append([h.meta.score, h.id, h.article_title, h.category_list])
+        print(h.meta.score, h.id, h.article_title, h.category_list)
     return rt
 
 def DFS_support(cat_id, g, depth, visited):
@@ -332,8 +355,8 @@ def test(term, weight_dict):
 
 def fuzzy_matching(article_id):
     pass
-def get_article_weight(threshold, article_id, name_to_cats, cat_id_to_name, article_id_to_name, cat_to_articles):
-    cats_id = name_to_cats[title]
+def get_article_weight(article_id, threshold, cat_id_to_name, article_id_to_name, cat_to_articles):
+    cats_id = name_to_cats[article_id]
     n_found = 0
     weight = 0
     for cat_id in cats_id:
@@ -351,50 +374,50 @@ def get_article_weight(threshold, article_id, name_to_cats, cat_id_to_name, arti
 
 # generate_data()
 # exit()
-cat_id_to_name = load_obj("cat_id_to_name.txt")
-# cat_name_to_id = load_obj("cat_name_to_id.txt")
-cat_id_to_pages = load_obj("cat_id_to_pages.txt")
-article_id_to_name = load_obj("article_id_to_name.txt")
-cat_to_articles = load_obj("cat_to_articles.txt")
 
-g = load_obj("g.txt")
-ginv = load_obj("ginv.txt")
-# # precompute_data(g)
-id_to_total_pages = load_obj("id_to_total_pages.txt")
-id_to_total_leaves = load_obj("id_to_total_leaves.txt")
+# cat_id_to_name = load_obj("cat_id_to_name.txt")
+# # cat_name_to_id = load_obj("cat_name_to_id.txt")
+# cat_id_to_pages = load_obj("cat_id_to_pages.txt")
+# article_id_to_name = load_obj("article_id_to_name.txt")
+article_to_cats = load("article_to_cats.txt")
+# cat_to_articles = load_obj("cat_to_articles.txt")
 
-
-terms1 = ["Cat", "Dog", "Bird", "Plant", "Animal"]
-terms2 = ["Algorithm", "Databases", "Data management", "Data mining", "Computer science"]
-terms3 = ["Query languages", "Databases", "Data management", "Data mining", "Big data", "Computer science"]
-terms4 = ["Databases", "Theoretical computer science", "Computer vision", "Natural language processing" , "Speech recognition", "Computational linguistics"]
-terms5 = ["Champaign", "Chicago", "New York", "Beijing", "Paris", "Illinois", "California", "United States", "France"]
-
-name_to_cats = {"Algorithm":['43940', '54278', '196926', '325876'],
-"Databases":['106923', '106915'], "Data management":['106883', '166934'],
-"Data mining":['106885', '400431'], "Computer science":['119960', '120066', '98251', '98333'],
-"Query languages": ['98289', '106883', '258574'],
-"Big data": ['123602019', '106883', '743619', '321333', '310770'],
-"Computational linguistics": ['98150', '636466', '400431', '93505'],
-"Speech recognition": ['58504', '98150', '289668', '298942', '61795237', '98195', '243975309'],
-"Natural language processing": ['98150', '289668', '215651'],
-"Computer vision": ['54377', '163499', '98378', '9451345', '487016'],
-"Theoretical computer science": ['325876', '400431'],
-"France": ['138197', '160899365', '131216162', '207723004', '140964', '661984', '184699', '72444866', '64719764', '59295209', '243147027', '2319959', '87630896', '265094', '178336766', '246797094'],
-"United States": ['297824', '160897546', '121324', '748886', '137358', '207723004', '140964', '661984', '184699', '72444866', '87630896', '265094', '675113', '31739602', '45105775'],
-"California": ['79119', '673938', '202244', '219888481', '165471901'],
-"Illinois": ['163265', '813494', '675111', '202244', '364820', '76031362'],
-"Paris": ['234253', '242485043', '25866894', '371', '91433', '97656', '125125', '139471', '253283', '118407825', '84505', '11472063', '59646016'],
-"Beijing": ['65427', '487016', '407645', '234546576', '372', '164918', '200712', '497266'],
-"New York": ['218237', '202244', '368401', '219888279', '487016', '74807239', '675126'],
-"Chicago": ['246801355', '190618810', '189950652', '190532922', '190533791', '91480', '101553', '162877285', '28949549', '29683106', '487016'],
-"Champaign": ['85986', '180780450', '91480', '190532417', '28958260', '304431']}
-
-terms_list = [terms2 , terms3 , terms4, terms5]
-# terms_list = [["Chicago"]]
+# g = load_obj("g.txt")
+# ginv = load_obj("ginv.txt")
+# # # precompute_data(g)
+# id_to_total_pages = load_obj("id_to_total_pages.txt")
+# id_to_total_leaves = load_obj("id_to_total_leaves.txt")
 
 es = Elasticsearch()
 search = Search(using=es, index="es-capacity", doc_type="article")
+
+terms1 = ["Cat", "Dog", "Bird", "Plant", "Animal"]
+terms2 = ["Algorithm", "Database", "Data management", "Data mining", "Computer science"]
+terms3 = ["Query language", "Database", "Data management", "Data mining", "Big data", "Computer science"]
+terms4 = ["Database", "Theoretical computer science", "Computer vision", "Natural language processing" , "Speech recognition", "Computational linguistics"]
+terms5 = ["Champaign", "Chicago", "New York", "Beijing", "Paris", "Illinois", "California", "United States", "France"]
+
+terms = [terms1, terms2, terms3, terms4, terms5]
+
+term_to_article = {"Algorithm": 3733315,
+"Database": 40423634, "Data management": 1015323,
+"Data mining": 38062867, "Computer science": 25031924,
+"Query language": 3961120,
+"Big data": 48151899,
+"Computational linguistics": 38562059,
+"Speech recognition": 38562215,
+"Natural language processing": 43779661,
+"Computer vision": 3966765,
+"Theoretical computer science": 17326466,
+"France": 37407566,
+"United States": 33014499,
+"California": 7375185,
+"Illinois": 11956271,
+"Paris": 4244049,
+"Beijing": 37299941,
+"New York": 51584461,
+"Chicago": 12799998,
+"Champaign": 8674577}
 
 if False:
     term1 = input("Enter Term 1:")
