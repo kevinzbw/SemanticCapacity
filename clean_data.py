@@ -5,8 +5,8 @@ clean_article_to_cat = True
 if clean_subcat_to_cat:
     file_in = "data/skos_categories_en.txt"
     file_out = "data/subcat_title_to_cat_title.txt"
-    fin = open(file_in, "r")
-    fout = open(file_out, "w")
+    fin = open(file_in, "r", encoding="utf-8")
+    fout = open(file_out, "w", encoding="utf-8")
     line = fin.readline()
     while line:
         if not line.startswith("<"):
@@ -29,8 +29,8 @@ if clean_subcat_to_cat:
 if clean_article_to_cat:
     file_in = "data/article_categories_en.txt"
     file_out = "data/article_title_to_cat_title.txt"
-    fin = open(file_in, "r")
-    fout = open(file_out, "w")
+    fin = open(file_in, "r", encoding="utf-8")
+    fout = open(file_out, "w", encoding="utf-8")
     line = fin.readline()
     while line:
         if not line.startswith("<"):

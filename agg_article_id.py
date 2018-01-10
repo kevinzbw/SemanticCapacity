@@ -1,13 +1,14 @@
 from collections import defaultdict
-agg_article_id = False
+agg_article_id = True
 agg_article_id2 = True
-agg_cat_article = False
+agg_article_id3 = True
+agg_cat_article = True
 
 if agg_article_id:
     agg = defaultdict(list)
     file_in = "data/article_title_to_cat_id.txt"
     file_out = "data/agg_article_title_to_cat_id.txt"
-    fin = open(file_in, "r", encoding = "ISO-8859-1")
+    fin = open(file_in, "r", encoding = "utf-8")
     line = fin.readline()
     while line:
         sp = line.split("\t")
@@ -16,7 +17,7 @@ if agg_article_id:
         agg[article].append(cat)
         line = fin.readline()
     fin.close()
-    fout = open(file_out, "w")
+    fout = open(file_out, "w", encoding = "utf-8")
     fout.write("title\tcategories\n")
     for article, cats in agg.items():
         fout.write(article + "\t" + cats[0])
@@ -27,16 +28,18 @@ if agg_article_id:
     fout.close()
     print("agg_article_id is done.")
 
-if agg_article_id2:
+if agg_article_id2 or agg_article_id3:
     map_article_id = {}
-    with open("data/official_article_id_to_article_title.txt", "r", encoding = "ISO-8859-1") as fin:
+    with open("data/article_id_to_article_title.txt", "r", encoding = "utf-8") as fin:
         for line in fin.readlines():
             sp = line.split("\t")
             map_article_id[sp[0].strip()] = sp[1].strip()
+
+if agg_article_id2:
     agg = defaultdict(list)
     file_in = "data/article_id_to_cat_id.txt"
     file_out = "data/article.txt"
-    fin = open(file_in, "r", encoding = "ISO-8859-1")
+    fin = open(file_in, "r", encoding = "utf-8")
     line = fin.readline()
     while line:
         sp = line.split("\t")
@@ -45,7 +48,7 @@ if agg_article_id2:
         agg[article].append(cat)
         line = fin.readline()
     fin.close()
-    fout = open(file_out, "w")
+    fout = open(file_out, "w", encoding = "utf-8")
     fout.write("article_id\tarticle_title\tcategories\n")
     for article_id, cats in agg.items():
         article_title = map_article_id[article_id].replace("_", " ")
@@ -57,11 +60,34 @@ if agg_article_id2:
     fout.close()
     print("agg_article_id2 is done.")
 
+if agg_article_id3:
+    agg = defaultdict(list)
+    file_in = "data/article_id_to_cat_id.txt"
+    file_out = "data/agg_article_id_to_cat_id.txt"
+    fin = open(file_in, "r", encoding = "utf-8")
+    line = fin.readline()
+    while line:
+        sp = line.split("\t")
+        article = sp[0].strip()
+        cat = sp[1].strip()
+        agg[article].append(cat)
+        line = fin.readline()
+    fin.close()
+    fout = open(file_out, "w", encoding = "utf-8")
+    for article, cats in agg.items():
+        fout.write(article + "\t" + cats[0])
+        if len(cats) > 1:
+            for cat in cats[1:]:
+                fout.write(";" + cat)
+        fout.write("\n")
+    fout.close()
+    print("agg_article_id3 is done.")
+
 if agg_cat_article:
     agg = defaultdict(list)
     file_in = "data/article_id_to_cat_id.txt"
     file_out = "data/agg_cat_id_to_article_id.txt"
-    fin = open(file_in, "r", encoding = "ISO-8859-1")
+    fin = open(file_in, "r", encoding = "utf-8")
     line = fin.readline()
     while line:
         sp = line.split("\t")
@@ -70,7 +96,7 @@ if agg_cat_article:
         agg[cat].append(article)
         line = fin.readline()
     fin.close()
-    fout = open(file_out, "w")
+    fout = open(file_out, "w", encoding = "utf-8")
     # fout.write("title\tcategories\n")
     for cat, articles in agg.items():
         fout.write(cat + "\t" + articles[0])

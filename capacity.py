@@ -5,6 +5,7 @@ from copy import deepcopy
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
 from collections import defaultdict
+import fuzzywuzzy as fuzz
 
 def store_obj(obj, filename):
     with open(filename, "wb") as f:
@@ -26,7 +27,7 @@ def generate_data():
     ginv = defaultdict(list)
     # all_id = set()
     # sub_id = set()
-    with open("data/subcat_id_to_cat_id.txt", "r", encoding = "ISO-8859-1") as f:
+    with open("data/subcat_id_to_cat_id.txt", "r", encoding = "utf-8") as f:
         for line in f.readlines():
             sp = line.split("\t")
             subcat = sp[0].strip()
@@ -34,7 +35,7 @@ def generate_data():
             g[cat].append(subcat)
             ginv[subcat].append(cat)
             
-    with open("data/official_cat.txt", "r", encoding = "ISO-8859-1") as f:
+    with open("data/cat_full.txt", "r", encoding = "utf-8") as f:
         for line in f.readlines():
             sp = line.split("\t")
             cat = sp[1].strip()
@@ -44,14 +45,14 @@ def generate_data():
             cat_id_to_name[cat_id] = cat
             cat_id_to_pages[cat_id] = int(n_pages)
 
-    with open("data/official_article_id_to_article_title.txt", "r", encoding = "ISO-8859-1") as f:
+    with open("data/article_id_to_article_title.txt", "r", encoding = "utf-8") as f:
         for line in f.readlines():
             sp = line.split("\t")
             article_id = sp[0].strip()
             article_title = sp[1].strip()
             article_id_to_name[article_id] = article_title
     
-    with open("data/agg_cat_id_to_article_id.txt", "r", encoding = "ISO-8859-1") as f:
+    with open("data/agg_cat_id_to_article_id.txt", "r", encoding = "utf-8") as f:
         for line in f.readlines():
             sp = line.split("\t")
             cat_id = sp[0].strip()
@@ -311,7 +312,7 @@ def reselect_candidate(results):
     major_component = get_component_index(candidates)
     new_results = [results[i] for i in major_component]
     print(major_component)
-    return new_results
+    return new_results    
 
 def plot(terms, weights):
     plt.figure()
@@ -323,11 +324,39 @@ def plot(terms, weights):
     plt.title('Capacity of Terms')
     plt.show()
 
+def test(term, weight_dict):
+    global name_to_cats, g, ginv
+    cats = name_to_cats[term]     
+    w = np.sum([weight_dict[cat] for cat in cats])/len(cats)
+    return w
+
+def fuzzy_matching(article_id):
+    pass
+def get_article_weight(threshold, article_id, name_to_cats, cat_id_to_name, article_id_to_name, cat_to_articles):
+    cats_id = name_to_cats[title]
+    n_found = 0
+    weight = 0
+    for cat_id in cats_id:
+        cat_name = cat_id_to_name[cat_id].replace("_", " ")
+        if fuzz.partial_ratio(title, cat_name) > threshold:
+            print(cat_name)
+            found += 1
+            weight += id_to_total_pages[cat_id]
+    if n_found != 0:
+        return weight / n_found
+    else:
+        for cat_id in cats_id:
+            sibling_articles_id = cat_to_articles[cat_id]
+
+
 # generate_data()
 # exit()
 cat_id_to_name = load_obj("cat_id_to_name.txt")
 # cat_name_to_id = load_obj("cat_name_to_id.txt")
 cat_id_to_pages = load_obj("cat_id_to_pages.txt")
+article_id_to_name = load_obj("article_id_to_name.txt")
+cat_to_articles = load_obj("cat_to_articles.txt")
+
 g = load_obj("g.txt")
 ginv = load_obj("ginv.txt")
 # # precompute_data(g)
@@ -368,20 +397,6 @@ es = Elasticsearch()
 search = Search(using=es, index="es-capacity", doc_type="article")
 
 if False:
-    line = input("Enter Terms:")
-    while line:
-        term = line.strip()
-        if term == "exit":
-            exit()
-        rs = search_article_title(search, term)
-        ts = set(rs[0][2])
-        for hit in rs:
-            print("title:", hit[1])
-            print([cat_id_to_name[index] for index in hit[2]])
-            print(ts.intersection(set(hit[2])))
-            print()
-        line = input("Enter Terms:")
-if False:
     term1 = input("Enter Term 1:")
     term2 = input("Enter Term 2:")
     while term1:
@@ -406,13 +421,6 @@ if False:
         term2 = input("Enter Term 2:")
     exit()
 
-def test(term, weight_dict):
-    global name_to_cats, g, ginv
-    cats = name_to_cats[term]     
-    w = np.sum([weight_dict[cat] for cat in cats])/len(cats)
-    if term == "Chicago":
-       print(w)
-    return w
 for terms in terms_list:
     # weights = [get_article_weight_gen(search, term, id_to_total_leaves, None) for term in terms]
     # weights1 = [get_article_avg_weight(search, g, term) for term in terms]

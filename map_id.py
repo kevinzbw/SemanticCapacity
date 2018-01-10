@@ -1,12 +1,12 @@
 
-map_subcat_to_cat = False
-map_cat_to_subcat = False
-map_article_to_cat = False
+map_subcat_to_cat = True
+map_cat_to_subcat = True
+map_article_to_cat = True
 map_article_to_cat2 = True
 map_cat_id = {}
 map_article_id = {}
 
-with open("data/official_cat_id_to_cat_title.txt", "r", encoding = "ISO-8859-1") as fin:
+with open("data/cat_id_to_cat_title.txt", "r", encoding = "utf-8") as fin:
     for line in fin.readlines():
         sp = line.split("\t")
         map_cat_id[sp[1].strip()] = sp[0].strip() 
@@ -14,8 +14,8 @@ with open("data/official_cat_id_to_cat_title.txt", "r", encoding = "ISO-8859-1")
 if map_subcat_to_cat:
     file_in = "data/subcat_title_to_cat_title.txt"
     file_out = "data/subcat_id_to_cat_id.txt"
-    fin = open(file_in, "r", encoding = "ISO-8859-1")
-    fout = open(file_out, "w")
+    fin = open(file_in, "r", encoding = "utf-8")
+    fout = open(file_out, "w", encoding = "utf-8")
     line = fin.readline()
     c = 0
     while line:
@@ -35,8 +35,8 @@ if map_subcat_to_cat:
 if map_cat_to_subcat:
     file_in = "data/subcat_title_to_cat_title.txt"
     file_out = "data/cat_title_to_subcat_title.txt"
-    fin = open(file_in, "r", encoding = "ISO-8859-1")
-    fout = open(file_out, "w")
+    fin = open(file_in, "r", encoding = "utf-8")
+    fout = open(file_out, "w", encoding = "utf-8")
     line = fin.readline()
     c = 0
     while line:
@@ -56,8 +56,8 @@ if map_cat_to_subcat:
 if map_article_to_cat:
     file_in = "data/article_title_to_cat_title.txt"
     file_out = "data/article_title_to_cat_id.txt"
-    fin = open(file_in, "r", encoding = "ISO-8859-1")
-    fout = open(file_out, "w")
+    fin = open(file_in, "r", encoding = "utf-8")
+    fout = open(file_out, "w", encoding = "utf-8")
     line = fin.readline()
     c = 0
     while line:
@@ -75,14 +75,14 @@ if map_article_to_cat:
 
 
 if map_article_to_cat2:
-    with open("data/official_article_id_to_article_title.txt", "r", encoding = "ISO-8859-1") as fin:
+    with open("data/article_id_to_article_title.txt", "r", encoding = "utf-8") as fin:
         for line in fin.readlines():
             sp = line.split("\t")
             map_article_id[sp[1].strip()] = sp[0].strip()
     file_in = "data/article_title_to_cat_id.txt"
     file_out = "data/article_id_to_cat_id.txt"
-    fin = open(file_in, "r", encoding = "ISO-8859-1")
-    fout = open(file_out, "w")
+    fin = open(file_in, "r", encoding = "utf-8")
+    fout = open(file_out, "w", encoding = "utf-8")
     line = fin.readline()
     c = 0
     while line:
@@ -91,7 +91,6 @@ if map_article_to_cat2:
             article_id = map_article_id[sp[0].strip()]
             fout.write(article_id + "\t" + sp[1].strip() + "\n")
         except:
-            print(sp[0].strip())
             c += 1
         line = fin.readline()
     fin.close()
