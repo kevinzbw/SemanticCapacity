@@ -1,110 +1,28 @@
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
+import os.path as path
 from copy import deepcopy
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
 from collections import defaultdict
-import fuzzywuzzy as fuzz
+from fuzzywuzzy import fuzz
+
+DATA_DIR = "new_data/"
+OBJ_DIR = "serialized_obj/"
 
 def store_obj(obj, filename):
-    with open(filename, "wb") as f:
+    file_path = path.join(OBJ_DIR, filename)
+    print("Storing", file_path)
+    with open(file_path, "wb") as f:
         pickle.dump(obj, f)
 
 def load_obj(filename):
-    with open(filename, "rb") as f:
+    file_path = path.join(OBJ_DIR, filename)
+    print("Loading", file_path)
+    with open(file_path, "rb") as f:
         obj = pickle.load(f)
     return obj
-
-def generate_data():
-    print("started to serialize")
-    cat_name_to_id = defaultdict(int)
-    cat_id_to_name = defaultdict(int)
-    cat_id_to_pages = defaultdict(int)
-    article_id_to_name = defaultdict(int)
-    cat_to_articles = defaultdict(list)
-    article_to_cats = defaultdict(list)
-    g = defaultdict(list)
-    ginv = defaultdict(list)
-    # all_id = set()
-    # sub_id = set()
-    with open("data/subcat_id_to_cat_id.txt", "r", encoding = "utf-8") as f:
-        for line in f.readlines():
-            sp = line.split("\t")
-            subcat = sp[0].strip()
-            cat = sp[1].strip()
-            g[cat].append(subcat)
-            ginv[subcat].append(cat)
-            
-    with open("data/cat_full.txt", "r", encoding = "utf-8") as f:
-        for line in f.readlines():
-            sp = line.split("\t")
-            cat = sp[1].strip()
-            cat_id = sp[0].strip()
-            n_pages = sp[2].strip()
-            cat_name_to_id[cat] = cat_id
-            cat_id_to_name[cat_id] = cat
-            cat_id_to_pages[cat_id] = int(n_pages)
-
-    with open("data/article_id_to_article_title.txt", "r", encoding = "utf-8") as f:
-        for line in f.readlines():
-            sp = line.split("\t")
-            article_id = sp[0].strip()
-            article_title = sp[1].strip()
-            article_id_to_name[article_id] = article_title
-    
-    with open("data/agg_cat_id_to_article_id.txt", "r", encoding = "utf-8") as f:
-        for line in f.readlines():
-            sp = line.split("\t")
-            cat_id = sp[0].strip()
-            articles_id = sp[1].strip().split(";")
-            cat_to_articles[cat_id] = articles_id
-            
-    with open("data/agg_article_id_to_cat_id.txt", "r", encoding = "utf-8") as f:
-        for line in f.readlines():
-            sp = line.split("\t")
-            article_id = sp[0].strip()
-            cats_id = sp[1].strip().split(";")
-            article_to_cats[article_id] = cats_id
-    
-    # root_id = all_id - sub_id
-    # print(map(cat_id_to_name.get, root_id))
-    store_obj(cat_name_to_id, "cat_name_to_id.txt")
-    store_obj(cat_id_to_name, "cat_id_to_name.txt")
-    store_obj(cat_id_to_pages, "cat_id_to_pages.txt")
-    store_obj(article_id_to_name, "article_id_to_name.txt")
-    store_obj(article_to_cats, "article_to_cats.txt")
-    store_obj(cat_to_articles, "cat_to_articles.txt")
-    store_obj(g, "g.txt")
-    store_obj(ginv, "ginv.txt")
-    print("finished")
-
-def precompute_page_data(g, id_to_pages):
-    id_to_num_pages = {}
-    c = 0
-    n = len(id_to_pages.keys())
-    for node in id_to_pages.keys():
-        c += 1
-        print(c, "/", n)
-        value = get_num_pages(g, id_to_pages, node)
-        id_to_num_pages[node] = value
-    store_obj(id_to_num_pages, "cat_id_to_total_pages.txt")
-    print("finished")
-
-def precompute_leaf_data(g, cat_id_to_name):
-    id_to_num_leaves = {}
-    c = 0
-    n = len(cat_id_to_name.keys())
-    for node in cat_id_to_name.keys():
-        c += 1
-        print(c, "/", n)
-        if node in g:
-            value = get_num_leaves(g, node)
-            id_to_num_leaves[node] = value
-        else:
-            id_to_num_leaves[node] = 1
-    store_obj(id_to_num_leaves, "cat_id_to_total_leaves2.txt")
-    print("finished")
 
 def get_num_leaves(g, nid):
     visited = set()
@@ -353,40 +271,97 @@ def test(term, weight_dict):
     w = np.sum([weight_dict[cat] for cat in cats])/len(cats)
     return w
 
-def fuzzy_matching(article_id):
-    pass
-def get_article_weight(article_id, threshold, cat_id_to_name, article_id_to_name, cat_to_articles):
-    cats_id = name_to_cats[article_id]
-    n_found = 0
-    weight = 0
-    for cat_id in cats_id:
-        cat_name = cat_id_to_name[cat_id].replace("_", " ")
-        if fuzz.partial_ratio(title, cat_name) > threshold:
-            print(cat_name)
-            found += 1
-            weight += id_to_total_pages[cat_id]
-    if n_found != 0:
-        return weight / n_found
-    else:
-        for cat_id in cats_id:
-            sibling_articles_id = cat_to_articles[cat_id]
 
+def get_article_weight_direct(article_id, threshold, article_to_cats, article_id_to_name, cat_id_to_name, cat_id_to_total_leaves):
+    cats_id = article_to_cats[article_id]
+    title = article_id_to_name[article_id]
+    title = title.replace("_", " ")
+    n_found = 0
+    avg_weight = 0
+    for cat_id in cats_id:
+        cat_name = cat_id_to_name[cat_id]
+        cat_name = cat_name.replace("_", " ")
+        if fuzz.ratio(title, cat_name) > threshold:
+            print("hit: " + cat_name, cat_id)
+            n_found += 1
+            avg_weight += cat_id_to_total_leaves[cat_id]
+    if n_found:
+        avg_weight /= n_found
+        return avg_weight
+    else:
+        return None
+
+def get_article_weight_sibling(article_id, threshold, article_to_cats, article_id_to_name, cat_id_to_name, cat_id_to_total_leaves, cat_to_articles):
+    cats_id = article_to_cats[article_id]
+    weights = []
+    for cat_id in cats_id:
+        siblings_id = cat_to_articles[cat_id]
+        for sibling_id in siblings_id:
+            weight = get_article_weight_direct(sibling_id, threshold, article_to_cats, article_id_to_name, cat_id_to_name, cat_id_to_total_leaves)
+            if weight:
+                weights.append(weight)
+    if len(weights):
+        return sum(weights) / len(weights)
+    else:
+        return None
+
+def get_article_weight(article_id, threshold, article_to_cats, article_id_to_name, cat_id_to_name, cat_id_to_total_leaves, cat_to_articles):
+    weight = get_article_weight_direct(article_id, threshold, article_to_cats, article_id_to_name, cat_id_to_name, cat_id_to_total_leaves)
+    if not weight:
+        weight = get_article_weight_sibling(article_id, threshold, article_to_cats, article_id_to_name, cat_id_to_name, cat_id_to_total_leaves, cat_to_articles)
+        if not weight:
+            print("miss")
+        else:
+            print("sibling")
+    else:
+        print("direct")
+    return weight
+    
+def test(search, term):
+    global cat_to_articles, cat_id_to_name, article_id_to_name, cat_id_to_total_leaves, cat_id_to_total_pages
+    global term_to_article
+    print(term)
+    article_id = term_to_article[term]
+    return get_article_weight_direct(article_id, 91, article_to_cats, article_id_to_name, cat_id_to_name, cat_id_to_total_leaves)
+    
+    results = search_article_title(search, term)
+    s = 0
+    s_score = 0
+    for r in results:
+        score, article_id, title, cat_list = r
+        s_score += score
+        weight = get_article_weight(article_id, 91, article_to_cats, article_id_to_name, cat_id_to_name, cat_id_to_total_leaves, cat_to_articles)
+        if weight:
+            s += score * weight
+    if s:
+        s = s/len(results)/s_score
+    return s
 
 # generate_data()
 # exit()
 
-# cat_id_to_name = load_obj("cat_id_to_name.txt")
+cat_id_to_name = load_obj("cat_id_to_name.txt")
 # # cat_name_to_id = load_obj("cat_name_to_id.txt")
 # cat_id_to_pages = load_obj("cat_id_to_pages.txt")
-# article_id_to_name = load_obj("article_id_to_name.txt")
-article_to_cats = load("article_to_cats.txt")
-# cat_to_articles = load_obj("cat_to_articles.txt")
+article_id_to_name = load_obj("article_id_to_name.txt")
+article_to_cats = load_obj("article_to_cats.txt")
+cat_to_articles = load_obj("cat_to_articles.txt")
 
 # g = load_obj("g.txt")
 # ginv = load_obj("ginv.txt")
 # # # precompute_data(g)
-# id_to_total_pages = load_obj("id_to_total_pages.txt")
-# id_to_total_leaves = load_obj("id_to_total_leaves.txt")
+cat_id_to_total_pages = load_obj("id_to_total_pages.txt")
+cat_id_to_total_leaves = load_obj("id_to_total_leaves.txt")
+
+
+# print([cat_id_to_total_leaves[term] for term in ["106923", "98333", "106883"]])
+# exit()
+# c = 0
+# for k,v in article_id_to_name.items():
+#     print(k, v)
+#     c += 1
+#     if c == 20:
+#         exit()
 
 es = Elasticsearch()
 search = Search(using=es, index="es-capacity", doc_type="article")
@@ -397,27 +372,27 @@ terms3 = ["Query language", "Database", "Data management", "Data mining", "Big d
 terms4 = ["Database", "Theoretical computer science", "Computer vision", "Natural language processing" , "Speech recognition", "Computational linguistics"]
 terms5 = ["Champaign", "Chicago", "New York", "Beijing", "Paris", "Illinois", "California", "United States", "France"]
 
-terms = [terms1, terms2, terms3, terms4, terms5]
+terms_list = [terms2, terms3, terms4, terms5]
 
-term_to_article = {"Algorithm": 3733315,
-"Database": 40423634, "Data management": 1015323,
-"Data mining": 38062867, "Computer science": 25031924,
-"Query language": 3961120,
-"Big data": 48151899,
-"Computational linguistics": 38562059,
-"Speech recognition": 38562215,
-"Natural language processing": 43779661,
-"Computer vision": 3966765,
-"Theoretical computer science": 17326466,
-"France": 37407566,
-"United States": 33014499,
-"California": 7375185,
-"Illinois": 11956271,
-"Paris": 4244049,
-"Beijing": 37299941,
-"New York": 51584461,
-"Chicago": 12799998,
-"Champaign": 8674577}
+term_to_article = {"Algorithm": "3733315",
+"Database": "40423634", "Data management": "1015323",
+"Data mining": "38062867", "Computer science": "25031924",
+"Query language": "3961120",
+"Big data": "48151899",
+"Computational linguistics": "38562059",
+"Speech recognition": "38562215",
+"Natural language processing": "43779661",
+"Computer vision": "3966765",
+"Theoretical computer science": "17326466",
+"France": "37407566",
+"United States": "33014499",
+"California": "7375185",
+"Illinois": "11956271",
+"Paris": "4244049",
+"Beijing": "37299941",
+"New York": "51584461",
+"Chicago": "12799998",
+"Champaign": "8674577"}
 
 if False:
     term1 = input("Enter Term 1:")
@@ -452,14 +427,14 @@ for terms in terms_list:
     # weights4 = [get_article_weight_gen(search, term, get_category_pages_weight, [g, ginv, cat_id_to_pages]) for term in terms]
     # weights5 = [get_article_weight_gen(search, term, get_category_pages_norm_weight, [g, ginv, cat_id_to_pages]) for term in terms]
     # weights6 = np.array([get_article_weight_gen(search, term, get_category_pre_pages_norm_weight, [g, ginv, id_to_total_pages]) for term in terms])
-    weights7 = np.array([get_article_weight_gen(search, term, id_to_total_pages, None) for term in terms])
-    # weights = np.array([get_article_weight_gen(search, term, id_to_total_leaves , None) for term in terms])
-    weights = np.array([test(term, id_to_total_leaves) for term in terms])
+    # weights7 = np.array([get_article_weight_gen(search, term, id_to_total_pages, None) for term in terms])
+    # weights8 = np.array([get_article_weight_gen(search, term, id_to_total_leaves , None) for term in terms])
+    # weights9 = np.array([test(term, id_to_total_leaves) for term in terms])
     # weights = weights6**0.7 * weights7**0.3
-    plot(terms, weights7)
-    plot(terms, weights)
+    
+    weights = np.array([test(search, term) for term in terms])
     print("------------")
     print(terms)
-    # print(weights1)
     print(weights)
     print("------------")
+    plot(terms, weights)
